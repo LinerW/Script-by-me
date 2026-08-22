@@ -176,7 +176,7 @@ local WsJpTab = Window:CreateTab("WS/JP", nil)
 
 Rayfield:Notify({
    Title = "Welcome to Ez walkspeed",
-   Content = "Script loaded donezo",
+   Content = "Script loaded NguyenMinhAdon",
    Duration = 5
 })
 
