@@ -22,6 +22,9 @@ local autoFarmRadius = 20
 
 local isDonating = false
 local windShrinePos = Vector3.new(-481.719, 138.292, 411.695)
+local boostMarketPos = Vector3.new(92.331, 237.831, -558.869)
+
+local selectedNPC = "None Selected"
 
 local tokenList = {
     "All",
@@ -37,6 +40,15 @@ local flowerFields = {}
 if Workspace:FindFirstChild("FlowerZones") then
     for _, v in pairs(Workspace.FlowerZones:GetChildren()) do
         table.insert(flowerFields, v.Name)
+    end
+end
+
+-- Lấy danh sách NPC từ Workspace.NPCs
+local npcList = {"None Selected"}
+local npcsFolder = Workspace:FindFirstChild("NPCs")
+if npcsFolder then
+    for _, npc in pairs(npcsFolder:GetChildren()) do
+        table.insert(npcList, npc.Name)
     end
 end
 
@@ -346,10 +358,10 @@ AutoFarmTab:CreateSlider({
     end,
 })
 
-local WindShrineTab = Window:CreateTab("Wind Shrine", nil)
+local BoostShrineTab = Window:CreateTab("Boost & Shrine", nil)
 
-WindShrineTab:CreateButton({
-    Name = "Donate",
+BoostShrineTab:CreateButton({
+    Name = "Donate WindShrine - 1ticket",
     Callback = function()
         if isDonating then return end
         isDonating = true
@@ -369,6 +381,52 @@ WindShrineTab:CreateButton({
             
             isDonating = false
         end)
+    end,
+})
+
+BoostShrineTab:CreateButton({
+    Name = "BoostMarket",
+    Callback = function()
+        local char = LocalPlayer.Character
+        if char and char:FindFirstChild("HumanoidRootPart") then
+            char.HumanoidRootPart.CFrame = CFrame.new(boostMarketPos)
+        end
+    end,
+})
+
+local TeleportTab = Window:CreateTab("Teleport", nil)
+
+TeleportTab:CreateDropdown({
+    Name = "Select NPC",
+    Options = npcList,
+    CurrentOption = {"None Selected"},
+    MultipleOptions = false,
+    Flag = "NpcDropdown",
+    Callback = function(Option)
+        if type(Option) == "table" then
+            selectedNPC = Option[1]
+        else
+            selectedNPC = Option
+        end
+    end,
+})
+
+TeleportTab:CreateButton({
+    Name = "Teleport To NPC",
+    Callback = function()
+        if selectedNPC == "None Selected" or not selectedNPC then return end
+
+        local npcsFolder = Workspace:FindFirstChild("NPCs")
+        local targetNpc = npcsFolder and npcsFolder:FindFirstChild(selectedNPC)
+        local char = LocalPlayer.Character
+
+        if targetNpc and char and char:FindFirstChild("HumanoidRootPart") then
+            -- Dùng GetPivot() lấy vị trí chính xác của NPC (dù là Model hay Part)
+            local npcPivot = targetNpc:GetPivot()
+            
+            -- Dịch chuyển nhân vật đến vị trí Pivot của NPC + nhích lên 3 studs tránh kẹt sàn
+            char:PivotTo(npcPivot * CFrame.new(0, 3, 0))
+        end
     end,
 })
 
