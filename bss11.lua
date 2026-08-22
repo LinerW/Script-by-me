@@ -9,12 +9,14 @@ local LocalPlayer = Players.LocalPlayer
 
 local playerActivesCommand = ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Network"):WaitForChild("Events"):WaitForChild("PlayerActivesCommand")
 local windShrineDonation = ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Network"):WaitForChild("Events"):WaitForChild("WindShrineDonation")
+local toolCollect = ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Network"):WaitForChild("Events"):WaitForChild("ToolCollect")
 local coreStats = LocalPlayer:WaitForChild("CoreStats")
 
 local autofarmField = {"None Selected"}
 local autofarmVar = false
 local autoMicroConverter = false
 local autoCollectTokens = false
+local autoDig = false
 local selectedToken = {"All"}
 local autoFarmRadius = 20
 
@@ -45,6 +47,24 @@ local function useMicroConverter()
         buffer.writeu8(b, i - 1, bytes[i])
     end
     playerActivesCommand:FireServer(b)
+end
+
+local function digTool()
+    local bytes = { 66, 83, 82, 80, 1, 0, 0 }
+    local b = buffer.create(#bytes)
+    for i = 1, #bytes do
+        buffer.writeu8(b, i - 1, bytes[i])
+    end
+    toolCollect:FireServer(b)
+end
+
+local function startAutoDigLoop()
+    task.spawn(function()
+        while autoDig do
+            digTool()
+            task.wait(0.1)
+        end
+    end)
 end
 
 local function donateWindShrine()
@@ -132,7 +152,7 @@ local function startAutoFarmLoop()
                 local startTime = tick()
                 while autofarmVar and (tick() - startTime < 2.5) do
                     RunService.Heartbeat:Wait()
-                    
+
                     if autoCollectTokens then
                         collectTokens()
                     end
@@ -176,7 +196,7 @@ local WsJpTab = Window:CreateTab("WS/JP", nil)
 
 Rayfield:Notify({
    Title = "Welcome to Ez walkspeed",
-   Content = "Script loaded NguyenMinhAdon",
+   Content = "Script loaded donezo",
    Duration = 5
 })
 
@@ -269,6 +289,18 @@ AutoFarmTab:CreateToggle({
         autofarmVar = Value
         if autofarmVar then
             startAutoFarmLoop()
+        end
+    end,
+})
+
+AutoFarmTab:CreateToggle({
+    Name = "Auto Dig Tool",
+    CurrentValue = false,
+    Flag = "AutoDigToggle",
+    Callback = function(Value)
+        autoDig = Value
+        if autoDig then
+            startAutoDigLoop()
         end
     end,
 })
