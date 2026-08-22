@@ -25,6 +25,7 @@ local windShrinePos = Vector3.new(-481.719, 138.292, 411.695)
 local boostMarketPos = Vector3.new(92.331, 237.831, -558.869)
 
 local selectedNPC = "None Selected"
+local isTeleportingTreasures = false
 
 local tokenList = {
     "All",
@@ -421,12 +422,33 @@ TeleportTab:CreateButton({
         local char = LocalPlayer.Character
 
         if targetNpc and char and char:FindFirstChild("HumanoidRootPart") then
-            -- Dùng GetPivot() lấy vị trí chính xác của NPC (dù là Model hay Part)
             local npcPivot = targetNpc:GetPivot()
-            
-            -- Dịch chuyển nhân vật đến vị trí Pivot của NPC + nhích lên 3 studs tránh kẹt sàn
             char:PivotTo(npcPivot * CFrame.new(0, 3, 0))
         end
+    end,
+})
+
+TeleportTab:CreateButton({
+    Name = "Teleport All Treasures (0.2s)",
+    Callback = function()
+        if isTeleportingTreasures then return end
+        isTeleportingTreasures = true
+
+        task.spawn(function()
+            local treasuresFolder = Workspace:FindFirstChild("Treasures")
+            if treasuresFolder then
+                for _, treasure in pairs(treasuresFolder:GetChildren()) do
+                    local char = LocalPlayer.Character
+                    if char and char:FindFirstChild("HumanoidRootPart") then
+                        -- Lấy vị trí bằng GetPivot() để tránh lỗi hỏng Part/Model
+                        local treasurePivot = treasure:GetPivot()
+                        char:PivotTo(treasurePivot * CFrame.new(0, 3, 0))
+                        task.wait(0.2)
+                    end
+                end
+            end
+            isTeleportingTreasures = false
+        end)
     end,
 })
 
