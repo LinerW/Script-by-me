@@ -10,6 +10,9 @@ local LocalPlayer = Players.LocalPlayer
 local playerActivesCommand = ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Network"):WaitForChild("Events"):WaitForChild("PlayerActivesCommand")
 local windShrineDonation = ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Network"):WaitForChild("Events"):WaitForChild("WindShrineDonation")
 local toolCollect = ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Network"):WaitForChild("Events"):WaitForChild("ToolCollect")
+local itemPackageEvent = ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Network"):WaitForChild("Events"):WaitForChild("ItemPackageEvent")
+local stickerPrinterActivate = ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Network"):WaitForChild("Events"):WaitForChild("StickerPrinterActivate")
+
 local coreStats = LocalPlayer:WaitForChild("CoreStats")
 
 local autofarmField = {"None Selected"}
@@ -19,6 +22,9 @@ local autoCollectTokens = false
 local autoDig = false
 local selectedToken = {"All"}
 local autoFarmRadius = 20
+
+local autoBuyBasicEgg = false
+local autoRollSticker = false
 
 local isDonating = false
 local windShrinePos = Vector3.new(-481.719, 138.292, 411.695)
@@ -51,6 +57,53 @@ if npcsFolder then
     for _, npc in pairs(npcsFolder:GetChildren()) do
         table.insert(npcList, npc.Name)
     end
+end
+
+-- Hàm mua Basic Egg (Đã cập nhật code mới từ Cobalt)
+local function buyBasicEgg()
+    pcall(function()
+        itemPackageEvent:InvokeServer(
+            (function(bytes)
+                local b = buffer.create(#bytes)
+                for i = 1, #bytes do
+                    buffer.writeu8(b, i - 1, bytes[i])
+                end
+                return b
+            end)({ 66, 83, 82, 80, 1, 2, 0, 4, 8, 0, 0, 0, 80, 117, 114, 99, 104, 97, 115, 101, 5, 3, 0, 0, 0, 4, 4, 0, 0, 0, 84, 121, 112, 101, 4, 5, 0, 0, 0, 66, 97, 115, 105, 99, 4, 6, 0, 0, 0, 65, 109, 111, 117, 110, 116, 3, 0, 0, 0, 0, 0, 0, 240, 63, 4, 8, 0, 0, 0, 67, 97, 116, 101, 103, 111, 114, 121, 4, 4, 0, 0, 0, 69, 103, 103, 115 })
+        )
+    end)
+end
+
+-- Hàm Roll Sticker Printer bằng Basic Egg
+local function rollStickerPrinter()
+    local bytes = { 66, 83, 82, 80, 1, 1, 0, 4, 9, 0, 0, 0, 66, 97, 115, 105, 99, 32, 69, 103, 103 }
+    local b = buffer.create(#bytes)
+    for i = 1, #bytes do
+        buffer.writeu8(b, i - 1, bytes[i])
+    end
+    pcall(function()
+        stickerPrinterActivate:FireServer(b)
+    end)
+end
+
+-- Vòng lặp Auto Buy Basic Egg
+local function startAutoBuyBasicEggLoop()
+    task.spawn(function()
+        while autoBuyBasicEgg do
+            buyBasicEgg()
+            task.wait(0.5)
+        end
+    end)
+end
+
+-- Vòng lặp Auto Roll Sticker (Đã chỉnh delay thành 10 giây)
+local function startAutoRollStickerLoop()
+    task.spawn(function()
+        while autoRollSticker do
+            rollStickerPrinter()
+            task.wait(10)
+        end
+    end)
 end
 
 local function useMicroConverter()
@@ -359,6 +412,33 @@ AutoFarmTab:CreateSlider({
     end,
 })
 
+-- TAB MỚI: Sticker & Buy
+local StickerBuyTab = Window:CreateTab("Sticker & Buy", nil)
+
+StickerBuyTab:CreateToggle({
+    Name = "Auto Buy Basic Egg",
+    CurrentValue = false,
+    Flag = "AutoBuyBasicEggToggle",
+    Callback = function(Value)
+        autoBuyBasicEgg = Value
+        if autoBuyBasicEgg then
+            startAutoBuyBasicEggLoop()
+        end
+    end,
+})
+
+StickerBuyTab:CreateToggle({
+    Name = "Auto Roll Sticker Printer (Basic Egg)",
+    CurrentValue = false,
+    Flag = "AutoRollStickerToggle",
+    Callback = function(Value)
+        autoRollSticker = Value
+        if autoRollSticker then
+            startAutoRollStickerLoop()
+        end
+    end,
+})
+
 local BoostShrineTab = Window:CreateTab("Boost & Shrine", nil)
 
 BoostShrineTab:CreateButton({
@@ -440,7 +520,6 @@ TeleportTab:CreateButton({
                 for _, treasure in pairs(treasuresFolder:GetChildren()) do
                     local char = LocalPlayer.Character
                     if char and char:FindFirstChild("HumanoidRootPart") then
-                        -- Lấy vị trí bằng GetPivot() để tránh lỗi hỏng Part/Model
                         local treasurePivot = treasure:GetPivot()
                         char:PivotTo(treasurePivot * CFrame.new(0, 3, 0))
                         task.wait(0.2)
