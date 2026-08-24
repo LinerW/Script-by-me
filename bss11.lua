@@ -18,8 +18,11 @@ local coreStats = LocalPlayer:WaitForChild("CoreStats")
 local autofarmField = {"None Selected"}
 local autofarmVar = false
 local autoMicroConverter = false
+local autoFestiveBean = false
+local festiveBeanInterval = 1
 local autoCollectTokens = false
 local autoDig = false
+local autoDigDelay = 0.1
 local selectedToken = {"All"}
 local autoFarmRadius = 20
 
@@ -32,6 +35,9 @@ local boostMarketPos = Vector3.new(92.331, 237.831, -558.869)
 
 local selectedNPC = "None Selected"
 local isTeleportingTreasures = false
+
+local antiAfkToggle = false
+local antiAfkConnection = nil
 
 local tokenList = {
     "All",
@@ -50,7 +56,6 @@ if Workspace:FindFirstChild("FlowerZones") then
     end
 end
 
--- Lấy danh sách NPC từ Workspace.NPCs
 local npcList = {"None Selected"}
 local npcsFolder = Workspace:FindFirstChild("NPCs")
 if npcsFolder then
@@ -59,7 +64,6 @@ if npcsFolder then
     end
 end
 
--- Hàm mua Basic Egg (Đã cập nhật code mới từ Cobalt)
 local function buyBasicEgg()
     pcall(function()
         itemPackageEvent:InvokeServer(
@@ -69,12 +73,11 @@ local function buyBasicEgg()
                     buffer.writeu8(b, i - 1, bytes[i])
                 end
                 return b
-            end)({ 66, 83, 82, 80, 1, 2, 0, 4, 8, 0, 0, 0, 80, 117, 114, 99, 104, 97, 115, 101, 5, 3, 0, 0, 0, 4, 4, 0, 0, 0, 84, 121, 112, 101, 4, 5, 0, 0, 0, 66, 97, 115, 105, 99, 4, 6, 0, 0, 0, 65, 109, 111, 117, 110, 116, 3, 0, 0, 0, 0, 0, 0, 240, 63, 4, 8, 0, 0, 0, 67, 97, 116, 101, 103, 111, 114, 121, 4, 4, 0, 0, 0, 69, 103, 103, 115 })
+            end)({ 66, 83, 82, 80, 1, 2, 0, 4, 8, 0, 0, 0, 80, 117, 114, 99, 104, 97, 115, 101, 5, 3, 0, 0, 0, 4, 4, 0, 0, 0, 84, 121, 112, 101, 4, 5, 0, 0, 0, 66, 97, 115, 105, 99, 4, 6, 0, 0, 0, 65, 109, 111, 117, 110, 116, 3, 0, 0, 0, 0, 0, 0, 240, 63, 4, 8, 0, 0, 0, 67, 97, 101, 103, 111, 114, 121, 4, 4, 0, 0, 0, 69, 103, 103, 115 })
         )
     end)
 end
 
--- Hàm Roll Sticker Printer bằng Basic Egg
 local function rollStickerPrinter()
     local bytes = { 66, 83, 82, 80, 1, 1, 0, 4, 9, 0, 0, 0, 66, 97, 115, 105, 99, 32, 69, 103, 103 }
     local b = buffer.create(#bytes)
@@ -86,7 +89,6 @@ local function rollStickerPrinter()
     end)
 end
 
--- Vòng lặp Auto Buy Basic Egg
 local function startAutoBuyBasicEggLoop()
     task.spawn(function()
         while autoBuyBasicEgg do
@@ -96,7 +98,6 @@ local function startAutoBuyBasicEggLoop()
     end)
 end
 
--- Vòng lặp Auto Roll Sticker (Đã chỉnh delay thành 10 giây)
 local function startAutoRollStickerLoop()
     task.spawn(function()
         while autoRollSticker do
@@ -115,6 +116,29 @@ local function useMicroConverter()
     playerActivesCommand:FireServer(b)
 end
 
+local function useFestiveBean()
+    pcall(function()
+        playerActivesCommand:FireServer(
+            (function(bytes)
+                local b = buffer.create(#bytes)
+                for i = 1, #bytes do
+                    buffer.writeu8(b, i - 1, bytes[i])
+                end
+                return b
+            end)({ 66, 83, 82, 80, 1, 2, 0, 4, 12, 0, 0, 0, 70, 101, 115, 116, 105, 118, 101, 32, 66, 101, 97, 110, 4, 11, 0, 0, 0, 70, 101, 115, 116, 105, 118, 101, 66, 101, 97, 110 })
+        )
+    end)
+end
+
+local function startAutoFestiveBeanLoop()
+    task.spawn(function()
+        while autoFestiveBean do
+            useFestiveBean()
+            task.wait(festiveBeanInterval * 60)
+        end
+    end)
+end
+
 local function digTool()
     local bytes = { 66, 83, 82, 80, 1, 0, 0 }
     local b = buffer.create(#bytes)
@@ -128,7 +152,7 @@ local function startAutoDigLoop()
     task.spawn(function()
         while autoDig do
             digTool()
-            task.wait(0.1)
+            task.wait(autoDigDelay)
         end
     end)
 end
@@ -258,7 +282,7 @@ local Window = Rayfield:CreateWindow({
    KeySystem = false
 })
 
-local WsJpTab = Window:CreateTab("WS/JP", nil)
+local MainTab = Window:CreateTab("Main", nil)
 
 Rayfield:Notify({
    Title = "Welcome to Ez walkspeed",
@@ -266,7 +290,7 @@ Rayfield:Notify({
    Duration = 5
 })
 
-WsJpTab:CreateToggle({
+MainTab:CreateToggle({
    Name = "Enable Loop WalkSpeed",
    CurrentValue = false,
    Flag = "WalkSpeedToggle",
@@ -275,7 +299,7 @@ WsJpTab:CreateToggle({
    end,
 })
 
-WsJpTab:CreateSlider({
+MainTab:CreateSlider({
    Name = "WalkSpeed Value",
    Range = {0, 300},
    Increment = 1,
@@ -287,7 +311,7 @@ WsJpTab:CreateSlider({
    end,
 })
 
-WsJpTab:CreateToggle({
+MainTab:CreateToggle({
    Name = "Enable Loop JumpPower",
    CurrentValue = false,
    Flag = "JumpPowerToggle",
@@ -296,7 +320,7 @@ WsJpTab:CreateToggle({
    end,
 })
 
-WsJpTab:CreateSlider({
+MainTab:CreateSlider({
    Name = "JumpPower Value",
    Range = {0, 300},
    Increment = 1,
@@ -308,7 +332,7 @@ WsJpTab:CreateSlider({
    end,
 })
 
-WsJpTab:CreateButton({
+MainTab:CreateButton({
    Name = "Infinite Jump Toggle",
    Callback = function()
       _G.infinjump = not _G.infinjump
@@ -333,6 +357,56 @@ WsJpTab:CreateButton({
       end
    end,
 })
+
+MainTab:CreateToggle({
+    Name = "Enable Anti-AFK",
+    CurrentValue = false,
+    Flag = "AntiAfkToggle",
+    Callback = function(Value)
+        antiAfkToggle = Value
+        if antiAfkToggle then
+            if not antiAfkConnection then
+                antiAfkConnection = LocalPlayer.Idled:Connect(function()
+                    if antiAfkToggle then
+                        local vu = game:GetService("VirtualUser")
+                        vu:CaptureController()
+                        vu:ClickButton2(Vector2.new())
+                    end
+                end)
+            end
+        else
+            if antiAfkConnection then
+                antiAfkConnection:Disconnect()
+                antiAfkConnection = nil
+            end
+        end
+    end,
+})
+
+local FpsLabel = MainTab:CreateLabel("FPS: ...")
+local PingLabel = MainTab:CreateLabel("Ping: ...")
+
+local sec = tick()
+local FPS = {}
+
+RunService.RenderStepped:Connect(function()
+    local fr = tick()
+    for index = #FPS, 1, -1 do
+        FPS[index + 1] = (FPS[index] >= fr - 1) and FPS[index] or nil
+    end
+    FPS[1] = fr
+    local fps = (tick() - sec >= 1 and #FPS) or (#FPS / (tick() - sec))
+    FpsLabel:Set("FPS: " .. tostring(math.floor(fps)))
+end)
+
+task.spawn(function()
+    while task.wait(1) do
+        pcall(function()
+            local ping = tonumber(game:GetService("Stats"):FindFirstChild("PerformanceStats").Ping:GetValue())
+            PingLabel:Set("Ping: " .. tostring(math.floor(ping)) .. " ms")
+        end)
+    end
+end)
 
 local AutoFarmTab = Window:CreateTab("Auto Farm", nil)
 
@@ -359,6 +433,18 @@ AutoFarmTab:CreateToggle({
     end,
 })
 
+AutoFarmTab:CreateSlider({
+    Name = "Auto Farm Radius",
+    Range = {0, 100},
+    Increment = 5,
+    Suffix = "studs",
+    CurrentValue = 20,
+    Flag = "AutoFarmRadius",
+    Callback = function(Value)
+        autoFarmRadius = Value
+    end,
+})
+
 AutoFarmTab:CreateToggle({
     Name = "Auto Dig Tool",
     CurrentValue = false,
@@ -368,6 +454,18 @@ AutoFarmTab:CreateToggle({
         if autoDig then
             startAutoDigLoop()
         end
+    end,
+})
+
+AutoFarmTab:CreateSlider({
+    Name = "Auto Dig Delay",
+    Range = {0.01, 3},
+    Increment = 0.01,
+    Suffix = "seconds",
+    CurrentValue = 0.1,
+    Flag = "AutoDigDelaySlider",
+    Callback = function(Value)
+        autoDigDelay = Value
     end,
 })
 
@@ -400,19 +498,30 @@ AutoFarmTab:CreateToggle({
     end,
 })
 
-AutoFarmTab:CreateSlider({
-    Name = "Auto Farm Radius",
-    Range = {0, 100},
-    Increment = 5,
-    Suffix = "studs",
-    CurrentValue = 20,
-    Flag = "AutoFarmRadius",
+AutoFarmTab:CreateToggle({
+    Name = "Auto Festive Bean",
+    CurrentValue = false,
+    Flag = "AutoFestiveBeanToggle",
     Callback = function(Value)
-        autoFarmRadius = Value
+        autoFestiveBean = Value
+        if autoFestiveBean then
+            startAutoFestiveBeanLoop()
+        end
     end,
 })
 
--- TAB MỚI: Sticker & Buy
+AutoFarmTab:CreateSlider({
+    Name = "Festive Bean Cooldown",
+    Range = {1, 60},
+    Increment = 1,
+    Suffix = "minutes",
+    CurrentValue = 1,
+    Flag = "FestiveBeanIntervalSlider",
+    Callback = function(Value)
+        festiveBeanInterval = Value
+    end,
+})
+
 local StickerBuyTab = Window:CreateTab("Sticker & Buy", nil)
 
 StickerBuyTab:CreateToggle({
