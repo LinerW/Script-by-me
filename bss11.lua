@@ -12,6 +12,7 @@ local windShrineDonation = ReplicatedStorage:WaitForChild("Shared"):WaitForChild
 local toolCollect = ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Network"):WaitForChild("Events"):WaitForChild("ToolCollect")
 local itemPackageEvent = ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Network"):WaitForChild("Events"):WaitForChild("ItemPackageEvent")
 local stickerPrinterActivate = ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Network"):WaitForChild("Events"):WaitForChild("StickerPrinterActivate")
+local stickerStackActivate = ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Network"):WaitForChild("Events"):WaitForChild("StickerStackActivate")
 
 local coreStats = LocalPlayer:WaitForChild("CoreStats")
 
@@ -20,6 +21,10 @@ local autofarmVar = false
 local autoMicroConverter = false
 local autoFestiveBean = false
 local festiveBeanInterval = 1
+local autoSuperSmoothie = false
+local superSmoothieInterval = 1
+local autoStickerStack = false
+local stickerStackInterval = 1
 local autoCollectTokens = false
 local autoDig = false
 local autoDigDelay = 0.1
@@ -29,7 +34,8 @@ local autoFarmRadius = 20
 local autoBuyBasicEgg = false
 local autoRollSticker = false
 
-local isDonating = false
+local autoDonateWind = false
+local donateWindInterval = 1
 local windShrinePos = Vector3.new(-481.719, 138.292, 411.695)
 local boostMarketPos = Vector3.new(92.331, 237.831, -558.869)
 
@@ -139,6 +145,52 @@ local function startAutoFestiveBeanLoop()
     end)
 end
 
+local function useSuperSmoothie()
+    pcall(function()
+        playerActivesCommand:FireServer(
+            (function(bytes)
+                local b = buffer.create(#bytes)
+                for i = 1, #bytes do
+                    buffer.writeu8(b, i - 1, bytes[i])
+                end
+                return b
+            end)({ 66, 83, 82, 80, 1, 2, 0, 4, 14, 0, 0, 0, 83, 117, 112, 101, 114, 32, 83, 109, 111, 111, 116, 104, 105, 101, 4, 13, 0, 0, 0, 83, 117, 112, 101, 114, 83, 109, 111, 111, 116, 104, 105, 101 })
+        )
+    end)
+end
+
+local function startAutoSuperSmoothieLoop()
+    task.spawn(function()
+        while autoSuperSmoothie do
+            useSuperSmoothie()
+            task.wait(superSmoothieInterval * 60)
+        end
+    end)
+end
+
+local function useStickerStack()
+    pcall(function()
+        stickerStackActivate:FireServer(
+            (function(bytes)
+                local b = buffer.create(#bytes)
+                for i = 1, #bytes do
+                    buffer.writeu8(b, i - 1, bytes[i])
+                end
+                return b
+            end)({ 66, 83, 82, 80, 1, 1, 0, 4, 7, 0, 0, 0, 84, 105, 99, 107, 101, 116, 115 })
+        )
+    end)
+end
+
+local function startAutoStickerStackLoop()
+    task.spawn(function()
+        while autoStickerStack do
+            useStickerStack()
+            task.wait(stickerStackInterval * 60)
+        end
+    end)
+end
+
 local function digTool()
     local bytes = { 66, 83, 82, 80, 1, 0, 0 }
     local b = buffer.create(#bytes)
@@ -152,7 +204,7 @@ local function startAutoDigLoop()
     task.spawn(function()
         while autoDig do
             digTool()
-            task.wait(autoDigDelay)
+            task.wait(math.max(0.01, autoDigDelay))
         end
     end)
 end
@@ -208,6 +260,50 @@ local function collectTokens()
     end
 end
 
+local function startAutoDonateWindLoop()
+    task.spawn(function()
+        while autoDonateWind do
+            -- Luu trang thai Auto Farm hien tai va tam dung Auto Farm
+            local wasFarming = autofarmVar
+            autofarmVar = false
+
+            local char = LocalPlayer.Character
+            if char and char:FindFirstChild("HumanoidRootPart") then
+                local hrp = char.HumanoidRootPart
+                
+                -- Teleport den Wind Shrine
+                hrp.CFrame = CFrame.new(windShrinePos)
+                task.wait(0.5)
+
+                -- Spam donate lien tuc trong 15 giay
+                local spamStart = tick()
+                while autoDonateWind and (tick() - spamStart < 15) do
+                    donateWindShrine()
+                    task.wait(0.1)
+                end
+
+                -- Nhat toan bo Token trong 5 giay
+                local collectStart = tick()
+                while autoDonateWind and (tick() - collectStart < 5) do
+                    collectTokens()
+                    task.wait(0.1)
+                end
+            end
+
+            -- Khoi phục lai Auto Farm neu truoc do dang bat
+            if wasFarming then
+                autofarmVar = true
+                task.spawn(function()
+                    startAutoFarmLoop()
+                end)
+            end
+
+            -- Cho theo thoi gian cai dat (tinh bang phut)
+            task.wait(donateWindInterval * 60)
+        end
+    end)
+end
+
 local function getRandomPointInRadius(radius, pointCFrame)
     local pointPosition = pointCFrame.Position
     local randX = math.random(-radius, radius)
@@ -215,7 +311,7 @@ local function getRandomPointInRadius(radius, pointCFrame)
     return Vector3.new(pointPosition.X + randX, pointPosition.Y, pointPosition.Z + randZ)
 end
 
-local function startAutoFarmLoop()
+function startAutoFarmLoop()
     task.spawn(function()
         while autofarmVar do
             local fieldString = type(autofarmField) == "table" and autofarmField[1] or autofarmField
@@ -522,6 +618,30 @@ AutoFarmTab:CreateSlider({
     end,
 })
 
+AutoFarmTab:CreateToggle({
+    Name = "Auto Super Smoothie",
+    CurrentValue = false,
+    Flag = "AutoSuperSmoothieToggle",
+    Callback = function(Value)
+        autoSuperSmoothie = Value
+        if autoSuperSmoothie then
+            startAutoSuperSmoothieLoop()
+        end
+    end,
+})
+
+AutoFarmTab:CreateSlider({
+    Name = "Super Smoothie Cooldown",
+    Range = {1, 60},
+    Increment = 1,
+    Suffix = "minutes",
+    CurrentValue = 1,
+    Flag = "SuperSmoothieIntervalSlider",
+    Callback = function(Value)
+        superSmoothieInterval = Value
+    end,
+})
+
 local StickerBuyTab = Window:CreateTab("Sticker & Buy", nil)
 
 StickerBuyTab:CreateToggle({
@@ -550,27 +670,27 @@ StickerBuyTab:CreateToggle({
 
 local BoostShrineTab = Window:CreateTab("Boost & Shrine", nil)
 
-BoostShrineTab:CreateButton({
-    Name = "Donate WindShrine - 1ticket",
-    Callback = function()
-        if isDonating then return end
-        isDonating = true
+BoostShrineTab:CreateToggle({
+    Name = "Auto Donate WindShrine (1ticket)",
+    CurrentValue = false,
+    Flag = "AutoDonateWindToggle",
+    Callback = function(Value)
+        autoDonateWind = Value
+        if autoDonateWind then
+            startAutoDonateWindLoop()
+        end
+    end,
+})
 
-        task.spawn(function()
-            local char = LocalPlayer.Character
-            if char and char:FindFirstChild("HumanoidRootPart") then
-                local hrp = char.HumanoidRootPart
-                
-                if (hrp.Position - windShrinePos).Magnitude > 15 then
-                    hrp.CFrame = CFrame.new(windShrinePos)
-                    task.wait(0.3)
-                end
-            end
-
-            donateWindShrine()
-            
-            isDonating = false
-        end)
+BoostShrineTab:CreateSlider({
+    Name = "WindShrine Cooldown",
+    Range = {1, 60},
+    Increment = 1,
+    Suffix = "minutes",
+    CurrentValue = 1,
+    Flag = "DonateWindIntervalSlider",
+    Callback = function(Value)
+        donateWindInterval = Value
     end,
 })
 
@@ -581,6 +701,30 @@ BoostShrineTab:CreateButton({
         if char and char:FindFirstChild("HumanoidRootPart") then
             char.HumanoidRootPart.CFrame = CFrame.new(boostMarketPos)
         end
+    end,
+})
+
+BoostShrineTab:CreateToggle({
+    Name = "Auto Sticker Stack ( 25ticket )",
+    CurrentValue = false,
+    Flag = "AutoStickerStackToggle",
+    Callback = function(Value)
+        autoStickerStack = Value
+        if autoStickerStack then
+            startAutoStickerStackLoop()
+        end
+    end,
+})
+
+BoostShrineTab:CreateSlider({
+    Name = "Sticker Stack Cooldown",
+    Range = {1, 60},
+    Increment = 1,
+    Suffix = "minutes",
+    CurrentValue = 1,
+    Flag = "StickerStackIntervalSlider",
+    Callback = function(Value)
+        stickerStackInterval = Value
     end,
 })
 
