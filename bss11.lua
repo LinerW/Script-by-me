@@ -18,6 +18,8 @@ local coreStats = LocalPlayer:WaitForChild("CoreStats")
 
 local autofarmField = {"None Selected"}
 local autofarmVar = false
+local autoGlitter = false
+local glitterInterval = 1
 local autoMicroConverter = false
 local autoFestiveBean = false
 local festiveBeanInterval = 1
@@ -68,6 +70,29 @@ if npcsFolder then
     for _, npc in pairs(npcsFolder:GetChildren()) do
         table.insert(npcList, npc.Name)
     end
+end
+
+local function useGlitter()
+    pcall(function()
+        playerActivesCommand:FireServer(
+            (function(bytes)
+                local b = buffer.create(#bytes)
+                for i = 1, #bytes do
+                    buffer.writeu8(b, i - 1, bytes[i])
+                end
+                return b
+            end)({ 66, 83, 82, 80, 1, 2, 0, 4, 7, 0, 0, 0, 71, 108, 105, 116, 116, 101, 114, 4, 7, 0, 0, 0, 71, 108, 105, 116, 116, 101, 114 })
+        )
+    end)
+end
+
+local function startAutoGlitterLoop()
+    task.spawn(function()
+        while autoGlitter do
+            useGlitter()
+            task.wait(glitterInterval * 60)
+        end
+    end)
 end
 
 local function buyBasicEgg()
@@ -131,7 +156,7 @@ local function useFestiveBean()
                     buffer.writeu8(b, i - 1, bytes[i])
                 end
                 return b
-            end)({ 66, 83, 82, 80, 1, 2, 0, 4, 12, 0, 0, 0, 70, 101, 115, 116, 105, 118, 101, 32, 66, 101, 97, 110, 4, 11, 0, 0, 0, 70, 101, 115, 116, 105, 118, 101, 66, 101, 97, 110 })
+            end)({ 66, 83, 82, 80, 1, 2, 0, 4, 12, 0, 0, 0, 70, 101, 153, 116, 105, 118, 101, 32, 66, 101, 97, 110, 4, 11, 0, 0, 0, 70, 101, 115, 116, 105, 118, 101, 66, 101, 97, 110 })
         )
     end)
 end
@@ -263,7 +288,6 @@ end
 local function startAutoDonateWindLoop()
     task.spawn(function()
         while autoDonateWind do
-            -- Luu trang thai Auto Farm hien tai va tam dung Auto Farm
             local wasFarming = autofarmVar
             autofarmVar = false
 
@@ -271,18 +295,15 @@ local function startAutoDonateWindLoop()
             if char and char:FindFirstChild("HumanoidRootPart") then
                 local hrp = char.HumanoidRootPart
                 
-                -- Teleport den Wind Shrine
                 hrp.CFrame = CFrame.new(windShrinePos)
                 task.wait(0.5)
 
-                -- Spam donate lien tuc trong 15 giay
                 local spamStart = tick()
                 while autoDonateWind and (tick() - spamStart < 15) do
                     donateWindShrine()
                     task.wait(0.1)
                 end
 
-                -- Nhat toan bo Token trong 5 giay
                 local collectStart = tick()
                 while autoDonateWind and (tick() - collectStart < 5) do
                     collectTokens()
@@ -290,7 +311,6 @@ local function startAutoDonateWindLoop()
                 end
             end
 
-            -- Khoi phục lai Auto Farm neu truoc do dang bat
             if wasFarming then
                 autofarmVar = true
                 task.spawn(function()
@@ -298,7 +318,6 @@ local function startAutoDonateWindLoop()
                 end)
             end
 
-            -- Cho theo thoi gian cai dat (tinh bang phut)
             task.wait(donateWindInterval * 60)
         end
     end)
@@ -514,6 +533,30 @@ AutoFarmTab:CreateDropdown({
     Flag = "FieldDropdown", 
     Callback = function(Options)
         autofarmField = Options
+    end,
+})
+
+AutoFarmTab:CreateToggle({
+    Name = "Auto Glitter",
+    CurrentValue = false,
+    Flag = "AutoGlitterToggle",
+    Callback = function(Value)
+        autoGlitter = Value
+        if autoGlitter then
+            startAutoGlitterLoop()
+        end
+    end,
+})
+
+AutoFarmTab:CreateSlider({
+    Name = "Glitter Cooldown",
+    Range = {1, 60},
+    Increment = 1,
+    Suffix = "minutes",
+    CurrentValue = 1,
+    Flag = "GlitterIntervalSlider",
+    Callback = function(Value)
+        glitterInterval = Value
     end,
 })
 
