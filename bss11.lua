@@ -1,4 +1,3 @@
--- BSS 1:1 
 local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
 local RunService = game:GetService("RunService")
 local Workspace = game:GetService("Workspace")
@@ -64,6 +63,15 @@ local mobSafeDistance = 15
 
 local selectedNPC = "None Selected"
 local isTeleportingTreasures = false
+
+local autoBuyRoboBlueDrive = false
+local autoBuyRoboRedDrive = false
+local autoBuyRoboWhiteDrive = false
+local autoBuyRoboGlitchedDrive = false
+local autoUseRedDrive = false
+local autoUseWhiteDrive = false
+local autoUseBlueDrive = false
+local autoUseGlitchedDrive = false
 
 local antiAfkToggle = false
 local antiAfkConnection = nil
@@ -188,7 +196,7 @@ local function useBoostMarket()
                 local b = buffer.create(#bytes)
                 for i = 1, #bytes do buffer.writeu8(b, i - 1, bytes[i]) end
                 return b
-            end)({ 66, 83, 82, 80, 1, 1, 0, 5, 3, 0, 0, 0, 4, 10, 0, 0, 0, 77, 97, 114, 101, 107, 110, 78, 97, 109, 101, 4, 12, 0, 0, 0, 66, 111, 111, 115, 116, 32, 77, 97, 114, 101, 107, 110, 4, 5, 0, 0, 0, 66, 111, 111, 115, 116, 4, 26, 0, 0, 0, 67, 111, 99, 111, 110, 117, 116, 32, 70, 101, 101, 108, 100, 32, 77, 97, 114, 101, 107, 110, 32, 66, 111, 111, 115, 116, 4, 6, 0, 0, 0, 65, 99, 116, 105, 111, 110, 4, 13, 0, 0, 0, 80, 111, 114, 99, 104, 97, 115, 101, 66, 111, 111, 115, 116 })
+            end)({ 66, 83, 82, 80, 1, 1, 0, 5, 3, 0, 0, 0, 4, 10, 0, 0, 0, 77, 97, 114, 101, 107, 110, 78, 97, 109, 101, 4, 12, 0, 0, 0, 66, 111, 111, 115, 116, 32, 77, 97, 114, 101, 107, 110, 4, 5, 0, 0, 0, 66, 111, 111, 115, 116, 4, 26, 0, 0, 0, 67, 111, 99, 111, 110, 117, 116, 32, 70, 101, 101, 108, 100, 32, 77, 97, 114, 101, 107, 110, 32, 66, 111, 111, 115, 116, 4, 6, 0, 0, 0, 65, 99, 116, 101, 105, 111, 110, 4, 13, 0, 0, 0, 80, 111, 114, 99, 104, 97, 115, 101, 66, 111, 111, 115, 116 })
         )
     end)
 end
@@ -268,7 +276,7 @@ local function buyBasicEgg()
                 local b = buffer.create(#bytes)
                 for i = 1, #bytes do buffer.writeu8(b, i - 1, bytes[i]) end
                 return b
-            end)({ 66, 83, 82, 80, 1, 2, 0, 4, 8, 0, 0, 0, 80, 117, 114, 99, 104, 97, 115, 101, 5, 3, 0, 0, 0, 4, 4, 0, 0, 0, 84, 121, 112, 101, 4, 5, 0, 0, 0, 66, 97, 115, 105, 99, 4, 6, 0, 0, 0, 65, 109, 111, 117, 110, 115, 3, 0, 0, 0, 0, 0, 0, 240, 63, 4, 8, 0, 0, 0, 67, 97, 101, 103, 111, 114, 121, 4, 4, 0, 0, 0, 69, 103, 103, 115 })
+            end)({ 66, 83, 82, 80, 1, 2, 0, 4, 8, 0, 0, 0, 80, 117, 114, 99, 104, 97, 115, 101, 5, 3, 0, 0, 0, 4, 4, 0, 0, 0, 84, 121, 112, 101, 4, 5, 0, 0, 0, 66, 97, 115, 105, 99, 4, 6, 0, 0, 0, 65, 109, 111, 117, 110, 115, 3, 0, 0, 0, 0, 0, 0, 240, 63, 4, 8, 0, 0, 0, 67, 97, 101, 103, 111, 111, 114, 121, 4, 4, 0, 0, 0, 69, 103, 103, 115 })
         )
     end)
 end
@@ -404,7 +412,7 @@ local function donateWindShrine()
             local b = buffer.create(#bytes)
             for i = 1, #bytes do buffer.writeu8(b, i - 1, bytes[i]) end
             return b
-        end)({ 66, 83, 82, 80, 1, 2, 0, 4, 6, 0, 0, 0, 84, 105, 99, 107, 101, 116, 3, 0, 0, 0, 0, 0, 0, 240, 63 })
+        end)({ 66, 83, 82, 80, 1, 2, 0, 4, 6, 0, 0, 0, 84, 105, 99, 107, 101, 115, 3, 0, 0, 0, 0, 0, 0, 240, 63 })
     )
 end
 
@@ -718,6 +726,168 @@ StickerBuyTab:CreateToggle({
 StickerBuyTab:CreateSlider({
     Name = "Beesmas Feast Cooldown", Range = {1, 180}, Increment = 1, Suffix = "minutes", CurrentValue = 91, Flag = "BeesmasFeastIntervalSlider",
     Callback = function(Value) beesmasFeastInterval = Value end,
+})
+
+local RoboTab = Window:CreateTab("Robo", nil)
+
+RoboTab:CreateToggle({
+    Name = "Loop Buy Blue Drive (0.5s)", CurrentValue = false, Flag = "AutoBuyRoboBlueDrive",
+    Callback = function(Value)
+        autoBuyRoboBlueDrive = Value
+        stopThread("AutoBuyRoboBlueDrive")
+        if autoBuyRoboBlueDrive then
+            activeThreads["AutoBuyRoboBlueDrive"] = task.spawn(function()
+                while autoBuyRoboBlueDrive do
+                    pcall(function()
+                        itemPackageEvent:InvokeServer(
+                            (function(bytes)
+                                local b = buffer.create(#bytes)
+                                for i = 1, #bytes do buffer.writeu8(b, i - 1, bytes[i]) end
+                                return b
+                            end)({ 66, 83, 82, 80, 1, 2, 0, 4, 8, 0, 0, 0, 80, 117, 114, 99, 104, 97, 115, 101, 5, 3, 0, 0, 0, 4, 4, 0, 0, 0, 84, 121, 112, 101, 4, 20, 0, 0, 0, 82, 111, 98, 111, 32, 66, 101, 97, 114, 32, 66, 108, 117, 101, 32, 68, 114, 105, 118, 101, 4, 6, 0, 0, 0, 65, 109, 111, 117, 110, 116, 3, 0, 0, 0, 0, 0, 0, 240, 63, 4, 8, 0, 0, 0, 67, 97, 116, 101, 103, 111, 114, 121, 4, 6, 0, 0, 0, 66, 117, 110, 100, 108, 101 })
+                        )
+                    end)
+                    task.wait(0.5)
+                end
+            end)
+        end
+    end,
+})
+
+RoboTab:CreateToggle({
+    Name = "Loop Buy Red Drive (0.5s)", CurrentValue = false, Flag = "AutoBuyRoboRedDrive",
+    Callback = function(Value)
+        autoBuyRoboRedDrive = Value
+        stopThread("AutoBuyRoboRedDrive")
+        if autoBuyRoboRedDrive then
+            activeThreads["AutoBuyRoboRedDrive"] = task.spawn(function()
+                while autoBuyRoboRedDrive do
+                    pcall(function()
+                        itemPackageEvent:InvokeServer(
+                            (function(bytes)
+                                local b = buffer.create(#bytes)
+                                for i = 1, #bytes do buffer.writeu8(b, i - 1, bytes[i]) end
+                                return b
+                            end)({ 66, 83, 82, 80, 1, 2, 0, 4, 8, 0, 0, 0, 80, 117, 114, 99, 104, 97, 115, 101, 5, 3, 0, 0, 0, 4, 4, 0, 0, 0, 84, 121, 112, 101, 4, 19, 0, 0, 0, 82, 111, 98, 111, 32, 66, 101, 97, 114, 32, 82, 101, 100, 32, 68, 114, 105, 118, 101, 4, 6, 0, 0, 0, 65, 109, 111, 117, 110, 116, 3, 0, 0, 0, 0, 0, 0, 240, 63, 4, 8, 0, 0, 0, 67, 97, 116, 101, 103, 111, 114, 121, 4, 6, 0, 0, 0, 66, 117, 110, 100, 108, 101 })
+                        )
+                    end)
+                    task.wait(0.5)
+                end
+            end)
+        end
+    end,
+})
+
+RoboTab:CreateToggle({
+    Name = "Loop Buy White Drive (0.5s)", CurrentValue = false, Flag = "AutoBuyRoboWhiteDrive",
+    Callback = function(Value)
+        autoBuyRoboWhiteDrive = Value
+        stopThread("AutoBuyRoboWhiteDrive")
+        if autoBuyRoboWhiteDrive then
+            activeThreads["AutoBuyRoboWhiteDrive"] = task.spawn(function()
+                while autoBuyRoboWhiteDrive do
+                    pcall(function()
+                        itemPackageEvent:InvokeServer(
+                            (function(bytes)
+                                local b = buffer.create(#bytes)
+                                for i = 1, #bytes do buffer.writeu8(b, i - 1, bytes[i]) end
+                                return b
+                            end)({ 66, 83, 82, 80, 1, 2, 0, 4, 8, 0, 0, 0, 80, 117, 114, 99, 104, 97, 115, 101, 5, 3, 0, 0, 0, 4, 4, 0, 0, 0, 84, 121, 112, 101, 4, 21, 0, 0, 0, 82, 111, 98, 111, 32, 66, 101, 97, 114, 32, 87, 104, 105, 116, 101, 32, 68, 114, 105, 118, 101, 4, 6, 0, 0, 0, 65, 109, 111, 117, 110, 116, 3, 0, 0, 0, 0, 0, 0, 240, 63, 4, 8, 0, 0, 0, 67, 97, 116, 101, 103, 111, 114, 121, 4, 6, 0, 0, 0, 66, 117, 110, 100, 108, 101 })
+                        )
+                    end)
+                    task.wait(0.5)
+                end
+            end)
+        end
+    end,
+})
+
+RoboTab:CreateToggle({
+    Name = "Loop Buy Glitched Drive (0.5s)", CurrentValue = false, Flag = "AutoBuyRoboGlitchedDrive",
+    Callback = function(Value)
+        autoBuyRoboGlitchedDrive = Value
+        stopThread("AutoBuyRoboGlitchedDrive")
+        if autoBuyRoboGlitchedDrive then
+            activeThreads["AutoBuyRoboGlitchedDrive"] = task.spawn(function()
+                while autoBuyRoboGlitchedDrive do
+                    pcall(function()
+                        itemPackageEvent:InvokeServer(
+                            (function(bytes)
+                                local b = buffer.create(#bytes)
+                                for i = 1, #bytes do buffer.writeu8(b, i - 1, bytes[i]) end
+                                return b
+                            end)({ 66, 83, 82, 80, 1, 2, 0, 4, 8, 0, 0, 0, 80, 117, 114, 99, 104, 97, 115, 101, 5, 3, 0, 0, 0, 4, 4, 0, 0, 0, 84, 121, 112, 101, 4, 24, 0, 0, 0, 82, 111, 98, 111, 32, 66, 101, 97, 114, 32, 71, 108, 105, 116, 99, 104, 101, 100, 32, 68, 114, 105, 118, 101, 4, 6, 0, 0, 0, 65, 109, 111, 117, 110, 116, 3, 0, 0, 0, 0, 0, 0, 240, 63, 4, 8, 0, 0, 0, 67, 97, 116, 101, 103, 111, 114, 121, 4, 6, 0, 0, 0, 66, 117, 110, 100, 108, 101 })
+                        )
+                    end)
+                    task.wait(0.5)
+                end
+            end)
+        end
+    end,
+})
+
+RoboTab:CreateToggle({
+    Name = "Loop Use Red Drive (0.5s)", CurrentValue = false, Flag = "AutoUseRedDrive",
+    Callback = function(Value)
+        autoUseRedDrive = Value
+        stopThread("AutoUseRedDrive")
+        if autoUseRedDrive then
+            activeThreads["AutoUseRedDrive"] = task.spawn(function()
+                while autoUseRedDrive do
+                    sendActiveCommand({ 66, 83, 82, 80, 1, 2, 0, 4, 9, 0, 0, 0, 82, 101, 100, 32, 68, 114, 105, 118, 101, 4, 8, 0, 0, 0, 82, 101, 100, 68, 114, 105, 118, 101 })
+                    task.wait(0.5)
+                end
+            end)
+        end
+    end,
+})
+
+RoboTab:CreateToggle({
+    Name = "Loop Use White Drive (0.5s)", CurrentValue = false, Flag = "AutoUseWhiteDrive",
+    Callback = function(Value)
+        autoUseWhiteDrive = Value
+        stopThread("AutoUseWhiteDrive")
+        if autoUseWhiteDrive then
+            activeThreads["AutoUseWhiteDrive"] = task.spawn(function()
+                while autoUseWhiteDrive do
+                    sendActiveCommand({ 66, 83, 82, 80, 1, 2, 0, 4, 11, 0, 0, 0, 87, 104, 105, 116, 101, 32, 68, 114, 105, 118, 101, 4, 10, 0, 0, 0, 87, 104, 105, 116, 101, 68, 114, 105, 118, 101 })
+                    task.wait(0.5)
+                end
+            end)
+        end
+    end,
+})
+
+RoboTab:CreateToggle({
+    Name = "Loop Use Blue Drive (0.5s)", CurrentValue = false, Flag = "AutoUseBlueDrive",
+    Callback = function(Value)
+        autoUseBlueDrive = Value
+        stopThread("AutoUseBlueDrive")
+        if autoUseBlueDrive then
+            activeThreads["AutoUseBlueDrive"] = task.spawn(function()
+                while autoUseBlueDrive do
+                    sendActiveCommand({ 66, 83, 82, 80, 1, 2, 0, 4, 10, 0, 0, 0, 66, 108, 117, 101, 32, 68, 114, 105, 118, 101, 4, 9, 0, 0, 0, 66, 108, 117, 101, 68, 114, 105, 118, 101 })
+                    task.wait(0.5)
+                end
+            end)
+        end
+    end,
+})
+
+RoboTab:CreateToggle({
+    Name = "Loop Use Glitched Drive (0.5s)", CurrentValue = false, Flag = "AutoUseGlitchedDrive",
+    Callback = function(Value)
+        autoUseGlitchedDrive = Value
+        stopThread("AutoUseGlitchedDrive")
+        if autoUseGlitchedDrive then
+            activeThreads["AutoUseGlitchedDrive"] = task.spawn(function()
+                while autoUseGlitchedDrive do
+                    sendActiveCommand({ 66, 83, 82, 80, 1, 2, 0, 4, 14, 0, 0, 0, 71, 108, 105, 116, 99, 104, 101, 100, 32, 68, 114, 105, 118, 101, 4, 13, 0, 0, 0, 71, 108, 105, 116, 99, 104, 101, 100, 68, 114, 105, 118, 101 })
+                    task.wait(0.5)
+                end
+            end)
+        end
+    end,
 })
 
 local BoostShrineTab = Window:CreateTab("Boost & Shrine", nil)
